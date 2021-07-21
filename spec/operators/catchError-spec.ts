@@ -178,7 +178,7 @@ describe('catchError operator', () => {
       })
     );
 
-    throwError(new Error('Some error')).pipe(
+    throwError(() => new Error('Some error')).pipe(
       catchError(() => synchronousObservable),
       takeWhile((x) => x != 2) // unsubscribe at the second side-effect
     ).subscribe(() => { /* noop */ });
@@ -338,8 +338,8 @@ describe('catchError operator', () => {
     });
   });
 
-  it('should pass the error as the first argument', (done: MochaDone) => {
-    throwError('bad').pipe(
+  it('should pass the error as the first argument', (done) => {
+    throwError(() => ('bad')).pipe(
       catchError((err: any) => {
         expect(err).to.equal('bad');
         return EMPTY;
@@ -353,12 +353,12 @@ describe('catchError operator', () => {
     });
   });
 
-  it('should accept selector returns any ObservableInput', (done: MochaDone) => {
+  it('should accept selector returns any ObservableInput', (done) => {
     const input$ = createObservableInputs(42);
 
     input$.pipe(
       mergeMap(input =>
-        throwError('bad').pipe(catchError(err => input))
+        throwError(() => ('bad')).pipe(catchError(err => input))
       )
     ).subscribe(x => {
       expect(x).to.be.equal(42);
@@ -403,14 +403,14 @@ describe('catchError operator', () => {
       sandbox.restore();
     });
 
-    it('should chain a throw from a promise using Observable.throw', (done: MochaDone) => {
+    it('should chain a throw from a promise using Observable.throw', (done) => {
       const subscribeSpy = sinon.spy();
       const errorSpy = sinon.spy();
       const thrownError = new Error('BROKEN THROW');
       const testError = new Error('BROKEN PROMISE');
       from(Promise.reject(testError)).pipe(
         catchError(err =>
-          throwError(thrownError)
+          throwError(() => (thrownError))
         )
       ).subscribe(subscribeSpy, errorSpy);
 
@@ -432,7 +432,7 @@ describe('catchError operator', () => {
   // The re-implementation in version 8 should fix the problem in the
   // referenced issue. Closed subscribers should remain closed.
   
-  it('Properly handle async handled result if source is synchronous', (done: MochaDone) => {
+  it('Properly handle async handled result if source is synchronous', (done) => {
     const source = new Observable<string>(observer => {
       observer.error(new Error('kaboom!'));
       observer.complete();

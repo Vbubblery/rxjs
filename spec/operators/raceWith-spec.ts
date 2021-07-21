@@ -150,7 +150,7 @@ describe('raceWith operator', () => {
     expectSubscriptions(e2.subscriptions).toBe(e2subs);
   });
 
-  it('should allow observable emits immediately', (done: MochaDone) => {
+  it('should allow observable emits immediately', (done) => {
     const e1 = of(true);
     const e2 = timer(200).pipe(map(_ => false));
 
@@ -184,7 +184,7 @@ describe('raceWith operator', () => {
   it('should ignore latter observables if a former one errors immediately', () => {
     const onError = sinon.spy();
     const onSubscribe = sinon.spy() as any;
-    const e1 = throwError('kaboom'); // Wins the race
+    const e1 = throwError(() => ('kaboom')); // Wins the race
     const e2 = defer(onSubscribe); // Should be ignored
 
     e1.pipe(raceWith(e2)).subscribe({ error: onError });

@@ -1,3 +1,60 @@
+# [7.2.0](https://github.com/reactivex/rxjs/compare/7.1.0...7.2.0) (2021-07-05)
+
+### Bug Fixes
+
+- **debounceTime:** unschedule dangling task on unsubscribe before complete ([#6464](https://github.com/reactivex/rxjs/issues/6464)) ([7ab0a4c](https://github.com/reactivex/rxjs/commit/7ab0a4c649b1b54e763a726c4ffdc183b0b45b23))
+- **fromEvent:** Types now properly infer when resultSelector is provided ([#6447](https://github.com/reactivex/rxjs/issues/6447)) ([39b9d81](https://github.com/reactivex/rxjs/commit/39b9d818ef6ea033dc8e53800e3a220d56c76b4a))
+
+### Features
+
+- Operators are all exported at the top level, from "rxjs". From here on out, we encourage top-level imports with RxJS. Importing from `rxjs/operators` will be deprecated soon. ([#6488](https://github.com/reactivex/rxjs/issues/6488)) ([512adc2](https://github.com/reactivex/rxjs/commit/512adc25f350660113275d8277d16b7f3eec1d49)), closes [#6242](https://github.com/reactivex/rxjs/issues/6242)
+
+# [7.1.0](https://github.com/reactivex/rxjs/compare/7.0.1...7.1.0) (2021-05-21)
+
+### Bug Fixes
+
+- returned operator functions from multicast operators `share`, `publish`, `publishReplay` are now referentially transparent. Meaning if you take the result of calling `publishReplay(3)` and pass it to more than one observable's `pipe` method, it will behave the same in each case, rather than having a cumulative effect, which was a regression introduced sometime in version 6. If you required this broken behavior, there is a workaround posted [here](https://github.com/ReactiveX/rxjs/pull/6410#issuecomment-846087374) ([#6410](https://github.com/reactivex/rxjs/issues/6410)) ([e2f2e51](https://github.com/reactivex/rxjs/commit/e2f2e516514bdeb76229e69c639f10f21bccafad)), closes [/github.com/ReactiveX/rxjs/pull/6410#issuecomment-846087374](https://github.com//github.com/ReactiveX/rxjs/pull/6410/issues/issuecomment-846087374) [#5411](https://github.com/reactivex/rxjs/issues/5411)
+
+### Features
+
+- All subjects now have an `observed` property. This will allow users to check whether a subject has current subscribers without us allowing access to the `observers` array, which is going to be made private in future versions. ([#6405](https://github.com/reactivex/rxjs/issues/6405)) ([f47425d](https://github.com/reactivex/rxjs/commit/f47425d349475231c0f3542bb6ecef16a63e933a))
+- **groupBy:** Support named arguments, support ObservableInputs for duration selector ([#5679](https://github.com/reactivex/rxjs/issues/5679)) ([7a99397](https://github.com/reactivex/rxjs/commit/7a9939773802c4f7948c6d868a8f75facdea9f37))
+- **share:** use another observable to control resets ([#6169](https://github.com/reactivex/rxjs/issues/6169)) ([12c3716](https://github.com/reactivex/rxjs/commit/12c3716cecbf01f353c980488bf18845177b37b6))
+
+## [7.0.1](https://github.com/reactivex/rxjs/compare/7.0.0...7.0.1) (2021-05-12)
+
+### Bug Fixes
+
+- **bindCallback:** resulting function now recreated underlying Subject and is reusable once again. ([#6369](https://github.com/reactivex/rxjs/issues/6369)) ([abf2bc1](https://github.com/reactivex/rxjs/commit/abf2bc13e38406717127159c8c373b910223b562))
+- **retry:** properly handles retry counts smaller than `1`. ([#6359](https://github.com/reactivex/rxjs/issues/6359)) ([e797bd7](https://github.com/reactivex/rxjs/commit/e797bd70b1368e189df00d697504304a3a5ef1a8))
+- **share:** properly closes synchronous "firehose" sources. ([#6370](https://github.com/reactivex/rxjs/issues/6370)) ([2271a91](https://github.com/reactivex/rxjs/commit/2271a9180131a0becdbf789c1429ef741ace4b2f))
+- Observable teardowns now properly called if `useDeprecatedSynchronousErrorHandling` is `true`. ([#6365](https://github.com/reactivex/rxjs/issues/6365)) ([e19e104](https://github.com/reactivex/rxjs/commit/e19e104d011233d83bc10c37f1ee0b3ac6e15612)), closes [#6364](https://github.com/reactivex/rxjs/issues/6364)
+- **Subscription:** properly release parent subscriptions when unsubscribed. ([#6352](https://github.com/reactivex/rxjs/issues/6352)) ([88331d2](https://github.com/reactivex/rxjs/commit/88331d2ecdcf0f81a0712b315ed810d4da7d4b97)), closes [#6351](https://github.com/reactivex/rxjs/issues/6351) [#6351](https://github.com/reactivex/rxjs/issues/6351)
+- **node**: do not reference DOM-related imports to assist in node usage. ([#6305](https://github.com/reactivex/rxjs/issues/6305)) ([b24818e](https://github.com/reactivex/rxjs/commit/b24818e96775045c7485932bf33349471e8f1363)), closes [#6297](https://github.com/reactivex/rxjs/issues/6297)
+
+# [7.0.0](https://github.com/reactivex/rxjs/compare/7.0.0-rc.3...7.0.0) (2021-04-29)
+
+### Bug Fixes
+
+- VS code will now properly auto-import operators, et al ([#6276](https://github.com/reactivex/rxjs/issues/6276)) ([f43c728](https://github.com/reactivex/rxjs/commit/f43c72815f9ebe5ee3a8ed11513be0f541c9517d)), closes [#6067](https://github.com/reactivex/rxjs/issues/6067)
+- **AjaxResponse:** add stricter `type` (`AjaxResponseType`) ([#6279](https://github.com/reactivex/rxjs/issues/6279)) ([839e192](https://github.com/reactivex/rxjs/commit/839e192b7d826d833d7ce941be97c3735bd19c0a))
+
+# [7.0.0-rc.3](https://github.com/reactivex/rxjs/compare/7.0.0-rc.2...7.0.0-rc.3) (2021-04-28)
+
+### Bug Fixes
+
+- finalize behaves well with useDeprecatedSynchronousErrorHandling ([#6251](https://github.com/reactivex/rxjs/issues/6251)) ([e4bed2a](https://github.com/reactivex/rxjs/commit/e4bed2a2bad994f05a39246707d4f203412cebbd)), closes [#6250](https://github.com/reactivex/rxjs/issues/6250)
+- resolve run-time errors when using deprecated sync error handling ([#6272](https://github.com/reactivex/rxjs/issues/6272)) ([35daaf7](https://github.com/reactivex/rxjs/commit/35daaf77d3a9a909a7ec22c362c97ac42a597f79)), closes [#6271](https://github.com/reactivex/rxjs/issues/6271)
+- resolve issue that made users unable to assert `instanceof AjaxError`. ([#6275](https://github.com/reactivex/rxjs/issues/6275)) ([a7c2d29](https://github.com/reactivex/rxjs/commit/a7c2d297ad6b2f405ac312b38f6360e9a645d890))
+
+### Features
+
+- add config object to connectable ([#6267](https://github.com/reactivex/rxjs/issues/6267)) ([4d98b40](https://github.com/reactivex/rxjs/commit/4d98b40f969d5f55381f9a178ef3c18e6850cf47))
+
+### BREAKING CHANGES
+
+- Our very new creation function, `connectable`, now takes a configuration object instead of just the `Subject` instance. This was necessary to make sure it covered all use cases for what we were trying to replace in the deprecated multicasting operators. Apologies for the late-in-the-game change, but we know it's not widely used yet (it's new in v7), and we want to get it right.
+
 # [7.0.0-rc.2](https://github.com/reactivex/rxjs/compare/7.0.0-rc.1...7.0.0-rc.2) (2021-04-20)
 
 ### Bug Fixes

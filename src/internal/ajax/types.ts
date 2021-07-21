@@ -7,6 +7,10 @@ import { PartialObserver } from '../types';
  */
 export type AjaxDirection = 'upload' | 'download';
 
+export type ProgressEventType = 'loadstart' | 'progress' | 'load';
+
+export type AjaxResponseType = `${AjaxDirection}_${ProgressEventType}`;
+
 /**
  * The object containing values RxJS used to make the HTTP request.
  *
@@ -181,8 +185,8 @@ export interface AjaxConfig {
    * This will **not** error for errored status codes. Rather, it will always _complete_ when
    * the HTTP response comes back.
    *
-   * @deprecated If you're looking for progress events, please try {@link includeDownloadProgress} and
-   * {@link includeUploadProgress}. This will be removed in version 8.
+   * @deprecated If you're looking for progress events, use {@link includeDownloadProgress} and
+   * {@link includeUploadProgress} instead. Will be removed in v8.
    */
   progressSubscriber?: PartialObserver<ProgressEvent>;
 

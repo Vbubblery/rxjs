@@ -68,7 +68,7 @@ import { interval } from 'rxjs';
 const observable = interval(1000 /* number of milliseconds */);
 ```
 
-See the list of [all static creation operators here](#creation-operators-list).
+See the list of all static creation operators [here](#creation-operators-list).
 
 ## Higher-order Observables
 
@@ -105,7 +105,7 @@ To explain how operators work, textual descriptions are often not enough. Many o
 
 Below you can see the anatomy of a marble diagram.
 
-<img src="../../src/assets/images/guide/marble-diagram-anatomy.svg">
+<img src="../../assets/images/guide/marble-diagram-anatomy.svg">
 
 Throughout this documentation site, we extensively use marble diagrams to explain how operators work. They may be really useful in other contexts too, like on a whiteboard or even in our unit tests (as ASCII diagrams).
 
@@ -349,4 +349,4 @@ Note that you must
 2. implement a "teardown" function that cleans up when the Observable completes (in this case by unsubscribing and clearing any pending timeouts).
 3. return that teardown function from the function passed to the Observable constructor.
 
-Of course, this is only an example; the `delay()` operator [already exists](/api/operators/delay).
+Of course, this is only an example; the [`delay()`](/api/operators/delay) operator already exists.

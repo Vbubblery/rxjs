@@ -6,6 +6,7 @@ import { reportUnhandledError } from './util/reportUnhandledError';
 import { noop } from './util/noop';
 import { nextNotification, errorNotification, COMPLETE_NOTIFICATION } from './NotificationFactories';
 import { timeoutProvider } from './scheduler/timeoutProvider';
+import { captureError } from './util/errorContext';
 
 /**
  * Implements the {@link Observer} interface and extends the
@@ -29,19 +30,22 @@ export class Subscriber<T> extends Subscription implements Observer<T> {
    * @return A Subscriber wrapping the (partially defined)
    * Observer represented by the given arguments.
    * @nocollapse
-   * @deprecated Do not use. Will be removed in v8. There is no replacement for this method, and there is no reason to be creating instances of `Subscriber` directly. If you have a specific use case, please file an issue.
+   * @deprecated Do not use. Will be removed in v8. There is no replacement for this
+   * method, and there is no reason to be creating instances of `Subscriber` directly.
+   * If you have a specific use case, please file an issue.
    */
   static create<T>(next?: (x?: T) => void, error?: (e?: any) => void, complete?: () => void): Subscriber<T> {
     return new SafeSubscriber(next, error, complete);
   }
 
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   protected isStopped: boolean = false;
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   protected destination: Subscriber<any> | Observer<any>; // this `any` is the escape hatch to erase extra type param (e.g. R)
 
   /**
-   * @deprecated Do not use directly. There is no reason to directly create an instance of Subscriber. This type is exported for typings reasons.
+   * @deprecated Internal implementation detail, do not use directly. Will be made internal in v8.
+   * There is no reason to directly create an instance of Subscriber. This type is exported for typings reasons.
    */
   constructor(destination?: Subscriber<any> | Observer<any>) {
     super();
@@ -190,16 +194,7 @@ function wrapForErrorHandling(handler: (arg?: any) => void, instance: SafeSubscr
       handler(...args);
     } catch (err) {
       if (config.useDeprecatedSynchronousErrorHandling) {
-        // If the user has opted for "super-gross" mode, we need to check to see
-        // if we're currently subscribing. If we are, we need to mark the _syncError
-        // So that it can be rethrown in the `subscribe` call on `Observable`.
-        if ((instance as any)._syncErrorHack_isSubscribing) {
-          (instance as any).__syncError = err;
-        } else {
-          // We're not currently subscribing, but we're in super-gross mode,
-          // so throw it immediately.
-          throw err;
-        }
+        captureError(err);
       } else {
         // Ideal path, we report this as an unhandled error,
         // which is thrown on a new call stack.

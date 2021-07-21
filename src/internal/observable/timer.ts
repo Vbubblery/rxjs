@@ -80,7 +80,7 @@ import { isValidDate } from '../util/isDate';
  * should occur will be incorrect. In this case, it would be best to do your own calculations
  * ahead of time, and pass a `number` in as the `dueTime`.
  *
- * @param due If a `number`, the amount of time in seconds to wait before emitting.
+ * @param due If a `number`, the amount of time in milliseconds to wait before emitting.
  * If a `Date`, the exact time at which to emit.
  * @param scheduler The scheduler to use to schedule the delay. Defaults to {@link asyncScheduler}.
  */
@@ -129,7 +129,7 @@ export function timer(due: number | Date, scheduler?: SchedulerLike): Observable
 export function timer(startDue: number | Date, intervalDuration: number, scheduler?: SchedulerLike): Observable<number>;
 
 /**
- * @deprecated Use `timer(dueTime, scheduler?)` instead. This call pattern will be removed in version 8.
+ * @deprecated The signature allowing `undefined` to be passed for `intervalDuration` will be removed in v8. Use the `timer(dueTime, scheduler?)` signature instead.
  */
 export function timer(dueTime: number | Date, unused: undefined, scheduler?: SchedulerLike): Observable<0>;
 

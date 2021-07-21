@@ -100,7 +100,7 @@ describe('bindNodeCallback', () => {
       expect(results).to.deep.equal([error]);
     });
 
-    it('should not emit, throw or complete if immediately unsubscribed', (done: MochaDone) => {
+    it('should not emit, throw or complete if immediately unsubscribed', (done) => {
       const nextSpy = sinon.spy();
       const throwSpy = sinon.spy();
       const completeSpy = sinon.spy();
@@ -123,6 +123,29 @@ describe('bindNodeCallback', () => {
         clearTimeout(timeout);
         done();
       });
+    });
+
+    it('should create a separate internal subject for each call', () => {
+      function callback(datum: number, cb: (err: any, n: number) => void) {
+        cb(null, datum);
+      }
+      const boundCallback = bindNodeCallback(callback);
+      const results: Array<number | string> = [];
+
+      boundCallback(42)
+        .subscribe(x => {
+          results.push(x);
+        }, null, () => {
+          results.push('done');
+        });
+      boundCallback(54)
+        .subscribe(x => {
+          results.push(x);
+        }, null, () => {
+          results.push('done');
+        });
+
+      expect(results).to.deep.equal([42, 'done', 54, 'done']);
     });
   });
 

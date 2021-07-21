@@ -3,12 +3,12 @@ import { expect } from 'chai';
 import { finalize, map, share, take } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { observableMatcher } from '../helpers/observableMatcher';
-import { of, timer, interval, NEVER, Observable } from 'rxjs';
+import { of, timer, interval, NEVER, Observable, noop } from 'rxjs';
 import { asInteropObservable } from '../helpers/interop-helper';
 
 /** @test {finalize} */
 describe('finalize', () => {
-  it('should call finalize after complete', (done: MochaDone) => {
+  it('should call finalize after complete', (done) => {
     let completed = false;
     of(1, 2, 3)
       .pipe(
@@ -22,7 +22,7 @@ describe('finalize', () => {
       });
   });
 
-  it('should call finalize after error', (done: MochaDone) => {
+  it('should call finalize after error', (done) => {
     let thrown = false;
     of(1, 2, 3)
       .pipe(
@@ -42,7 +42,7 @@ describe('finalize', () => {
       });
   });
 
-  it('should call finalize upon disposal', (done: MochaDone) => {
+  it('should call finalize upon disposal', (done) => {
     let disposed = false;
     const subscription = timer(100)
       .pipe(
@@ -56,11 +56,11 @@ describe('finalize', () => {
     subscription.unsubscribe();
   });
 
-  it('should call finalize when synchronously subscribing to and unsubscribing from a shared Observable', (done: MochaDone) => {
+  it('should call finalize when synchronously subscribing to and unsubscribing from a shared Observable', (done) => {
     interval(50).pipe(finalize(done), share()).subscribe().unsubscribe();
   });
 
-  it('should call two finalize instances in succession on a shared Observable', (done: MochaDone) => {
+  it('should call two finalize instances in succession on a shared Observable', (done) => {
     let invoked = 0;
     function checkFinally() {
       invoked += 1;
@@ -270,6 +270,62 @@ describe('finalize', () => {
       });
 
     expect(sideEffects).to.deep.equal([0, 1, 2]);
+  });
+
+  it('should execute finalize even with a sync thrown error', () => {
+    let called = false;
+    const badObservable = new Observable(() => {
+      throw new Error('bad');
+    }).pipe(
+      finalize(() => {
+        called = true;
+      })
+    );
+
+    badObservable.subscribe({
+      error: noop,
+    });
+
+    expect(called).to.be.true;
+  });
+
+  it('should execute finalize in order even with a sync error', () => {
+    const results: any[] = [];
+    const badObservable = new Observable((subscriber) => {
+      subscriber.error(new Error('bad'));
+    }).pipe(
+      finalize(() => {
+        results.push(1);
+      }),
+      finalize(() => {
+        results.push(2);
+      })
+    );
+
+    badObservable.subscribe({
+      error: noop,
+    });
+
+    expect(results).to.deep.equal([1, 2]);
+  });
+
+  it('should execute finalize in order even with a sync thrown error', () => {
+    const results: any[] = [];
+    const badObservable = new Observable(() => {
+      throw new Error('bad');
+    }).pipe(
+      finalize(() => {
+        results.push(1);
+      }),
+      finalize(() => {
+        results.push(2);
+      })
+    );
+
+    badObservable.subscribe({
+      error: noop,
+    });
+    expect(results).to.deep.equal([1, 2]);
   });
 
   it('should finalize in the proper order', () => {

@@ -9,6 +9,7 @@ import { observable as Symbol_observable } from './symbol/observable';
 import { pipeFromArray } from './util/pipe';
 import { config } from './config';
 import { isFunction } from './util/isFunction';
+import { errorContext } from './util/errorContext';
 
 /**
  * A representation of any set of values over any amount of time. This is the most basic building block
@@ -18,12 +19,12 @@ import { isFunction } from './util/isFunction';
  */
 export class Observable<T> implements Subscribable<T> {
   /**
-   * @deprecated This is an internal implementation detail, do not use.
+   * @deprecated Internal implementation detail, do not use directly. Will be made internal in v8.
    */
   source: Observable<any> | undefined;
 
   /**
-   * @deprecated This is an internal implementation detail, do not use.
+   * @deprecated Internal implementation detail, do not use directly. Will be made internal in v8.
    */
   operator: Operator<any, T> | undefined;
 
@@ -43,13 +44,13 @@ export class Observable<T> implements Subscribable<T> {
   // HACK: Since TypeScript inherits static properties too, we have to
   // fight against TypeScript here so Subject can have a different static create signature
   /**
-   * Creates a new cold Observable by calling the Observable constructor
+   * Creates a new Observable by calling the Observable constructor
    * @owner Observable
    * @method create
    * @param {Function} subscribe? the subscriber function to be passed to the Observable constructor
-   * @return {Observable} a new cold observable
+   * @return {Observable} a new observable
    * @nocollapse
-   * @deprecated use new Observable() instead
+   * @deprecated Use `new Observable()` instead. Will be removed in v8.
    */
   static create: (...args: any[]) => any = <T>(subscribe?: (subscriber: Subscriber<T>) => TeardownLogic) => {
     return new Observable<T>(subscribe);
@@ -61,9 +62,10 @@ export class Observable<T> implements Subscribable<T> {
    * @method lift
    * @param operator the operator defining the operation to take on the observable
    * @return a new observable with the Operator applied
-   * @deprecated This is an internal implementation detail, do not use directly. If you have implemented an operator
-   * using `lift`, it is recommended that you create an operator by simply returning `new Observable()` directly.
-   * See "Creating new operators from scratch" section here: https://rxjs.dev/guide/operators
+   * @deprecated Internal implementation detail, do not use directly. Will be made internal in v8.
+   * If you have implemented an operator using `lift`, it is recommended that you create an
+   * operator by simply returning `new Observable()` directly. See "Creating new operators from
+   * scratch" section here: https://rxjs.dev/guide/operators
    */
   lift<R>(operator?: Operator<T, R>): Observable<R> {
     const observable = new Observable<R>();
@@ -74,7 +76,7 @@ export class Observable<T> implements Subscribable<T> {
 
   subscribe(observer?: Partial<Observer<T>>): Subscription;
   subscribe(next: (value: T) => void): Subscription;
-  /** @deprecated Use an observer instead of a complete callback, Details: https://rxjs.dev/deprecations/subscribe-arguments */
+  /** @deprecated Instead of passing separate callback arguments, use an observer argument. Signatures taking separate callback arguments will be removed in v8. Details: https://rxjs.dev/deprecations/subscribe-arguments */
   subscribe(next?: ((value: T) => void) | null, error?: ((error: any) => void) | null, complete?: (() => void) | null): Subscription;
   /**
    * Invokes an execution of an Observable and registers Observer handlers for notifications it will emit.
@@ -215,42 +217,24 @@ export class Observable<T> implements Subscribable<T> {
   ): Subscription {
     const subscriber = isSubscriber(observerOrNext) ? observerOrNext : new SafeSubscriber(observerOrNext, error, complete);
 
-    // If we have an operator, it's the result of a lift, and we let the lift
-    // mechanism do the subscription for us in the operator call. Otherwise,
-    // if we have a source, it's a trusted observable we own, and we can call
-    // the `_subscribe` without wrapping it in a try/catch. If we are supposed to
-    // use the deprecated sync error handling, then we don't need the try/catch either
-    // otherwise, it may be from a user-made observable instance, and we want to
-    // wrap it in a try/catch so we can handle errors appropriately.
-    const { operator, source } = this;
+    errorContext(() => {
+      const { operator, source } = this;
+      subscriber.add(
+        operator
+          ? // We're dealing with a subscription in the
+            // operator chain to one of our lifted operators.
+            operator.call(subscriber, source)
+          : source
+          ? // If `source` has a value, but `operator` does not, something that
+            // had intimate knowledge of our API, like our `Subject`, must have
+            // set it. We're going to just call `_subscribe` directly.
+            this._subscribe(subscriber)
+          : // In all other cases, we're likely wrapping a user-provided initializer
+            // function, so we need to catch errors and handle them appropriately.
+            this._trySubscribe(subscriber)
+      );
+    });
 
-    let dest: any = subscriber;
-    if (config.useDeprecatedSynchronousErrorHandling) {
-      dest._syncErrorHack_isSubscribing = true;
-    }
-
-    subscriber.add(
-      operator
-        ? operator.call(subscriber, source)
-        : source || config.useDeprecatedSynchronousErrorHandling
-        ? this._subscribe(subscriber)
-        : this._trySubscribe(subscriber)
-    );
-
-    if (config.useDeprecatedSynchronousErrorHandling) {
-      dest._syncErrorHack_isSubscribing = false;
-      // In the case of the deprecated sync error handling,
-      // we need to crawl forward through our subscriber chain and
-      // look to see if there's any synchronously thrown errors.
-      // Does this suck for perf? Yes. So stop using the deprecated sync
-      // error handling already. We're removing this in v8.
-      while (dest) {
-        if (dest.__syncError) {
-          throw dest.__syncError;
-        }
-        dest = dest.destination;
-      }
-    }
     return subscriber;
   }
 
@@ -317,11 +301,11 @@ export class Observable<T> implements Subscribable<T> {
    * @param promiseCtor a constructor function used to instantiate the Promise
    * @return a promise that either resolves on observable completion or
    *  rejects with the handled error
-   * @deprecated remove in v8. Passing a Promise constructor will no longer be available
+   * @deprecated Passing a Promise constructor will no longer be available
    * in upcoming versions of RxJS. This is because it adds weight to the library, for very
    * little benefit. If you need this functionality, it is recommended that you either
    * polyfill Promise, or you create an adapter to convert the returned native promise
-   * to whatever promise implementation you wanted.
+   * to whatever promise implementation you wanted. Will be removed in v8.
    */
   forEach(next: (value: T) => void, promiseCtor: PromiseConstructorLike): Promise<void>;
 
@@ -452,15 +436,15 @@ export class Observable<T> implements Subscribable<T> {
    * ```
    */
   pipe(...operations: OperatorFunction<any, any>[]): Observable<any> {
-    return operations.length ? pipeFromArray(operations)(this) : this;
+    return pipeFromArray(operations)(this);
   }
 
   /* tslint:disable:max-line-length */
-  /** @deprecated Deprecated use {@link firstValueFrom} or {@link lastValueFrom} instead */
+  /** @deprecated Replaced with {@link firstValueFrom} and {@link lastValueFrom}. Will be removed in v8. Details: https://rxjs.dev/deprecations/to-promise */
   toPromise(): Promise<T | undefined>;
-  /** @deprecated Deprecated use {@link firstValueFrom} or {@link lastValueFrom} instead */
+  /** @deprecated Replaced with {@link firstValueFrom} and {@link lastValueFrom}. Will be removed in v8. Details: https://rxjs.dev/deprecations/to-promise */
   toPromise(PromiseCtor: typeof Promise): Promise<T | undefined>;
-  /** @deprecated Deprecated use {@link firstValueFrom} or {@link lastValueFrom} instead */
+  /** @deprecated Replaced with {@link firstValueFrom} and {@link lastValueFrom}. Will be removed in v8. Details: https://rxjs.dev/deprecations/to-promise */
   toPromise(PromiseCtor: PromiseConstructorLike): Promise<T | undefined>;
   /* tslint:enable:max-line-length */
 
@@ -480,7 +464,7 @@ export class Observable<T> implements Subscribable<T> {
    * @return A Promise that resolves with the last value emit, or
    * rejects on an error. If there were no emissions, Promise
    * resolves with undefined.
-   * @deprecated Deprecated use {@link firstValueFrom} or {@link lastValueFrom} instead
+   * @deprecated Replaced with {@link firstValueFrom} and {@link lastValueFrom}. Will be removed in v8. Details: https://rxjs.dev/deprecations/to-promise
    */
   toPromise(promiseCtor?: PromiseConstructorLike): Promise<T | undefined> {
     promiseCtor = getPromiseCtor(promiseCtor);

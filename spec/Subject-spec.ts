@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { Subject, ObjectUnsubscribedError, Observable, AsyncSubject, Observer, of, config } from 'rxjs';
+import { Subject, ObjectUnsubscribedError, Observable, AsyncSubject, Observer, of, config, throwError, concat } from 'rxjs';
 import { AnonymousSubject } from 'rxjs/internal/Subject';
-import { delay } from 'rxjs/operators';
+import { catchError, delay, map, mergeMap } from 'rxjs/operators';
 import { TestScheduler } from 'rxjs/testing';
 import { observableMatcher } from './helpers/observableMatcher';
 
@@ -13,7 +13,7 @@ describe('Subject', () => {
     rxTestScheduler = new TestScheduler(observableMatcher);
   });
 
-  it('should allow next with undefined or any when created with no type', (done: MochaDone) => {
+  it('should allow next with undefined or any when created with no type', (done) => {
     const subject = new Subject();
     subject.subscribe(
       (x) => {
@@ -29,7 +29,7 @@ describe('Subject', () => {
     subject.complete();
   });
 
-  it('should allow empty next when created with void type', (done: MochaDone) => {
+  it('should allow empty next when created with void type', (done) => {
     const subject = new Subject<void>();
     subject.subscribe(
       (x) => {
@@ -43,7 +43,7 @@ describe('Subject', () => {
     subject.complete();
   });
 
-  it('should pump values right on through itself', (done: MochaDone) => {
+  it('should pump values right on through itself', (done) => {
     const subject = new Subject<string>();
     const expected = ['foo', 'bar'];
 
@@ -60,7 +60,7 @@ describe('Subject', () => {
     subject.complete();
   });
 
-  it('should pump values to multiple subscribers', (done: MochaDone) => {
+  it('should pump values to multiple subscribers', (done) => {
     const subject = new Subject<string>();
     const expected = ['foo', 'bar'];
 
@@ -397,7 +397,7 @@ describe('Subject', () => {
     expect(results3).to.deep.equal([]);
   });
 
-  it('should not allow values to be nexted after it is unsubscribed', (done: MochaDone) => {
+  it('should not allow values to be nexted after it is unsubscribed', (done) => {
     const subject = new Subject<string>();
     const expected = ['foo'];
 
@@ -411,7 +411,7 @@ describe('Subject', () => {
     done();
   });
 
-  it('should clean out unsubscribed subscribers', (done: MochaDone) => {
+  it('should clean out unsubscribed subscribers', (done) => {
     const subject = new Subject();
 
     const sub1 = subject.subscribe(function (x) {
@@ -428,6 +428,30 @@ describe('Subject', () => {
     sub2.unsubscribe();
     expect(subject.observers.length).to.equal(0);
     done();
+  });
+
+  it('should expose observed status', () => {
+    const subject = new Subject();
+
+    expect(subject.observed).to.equal(false);
+
+    const sub1 = subject.subscribe(function (x) {
+      //noop
+    });
+
+    expect(subject.observed).to.equal(true);
+
+    const sub2 = subject.subscribe(function (x) {
+      //noop
+    });
+
+    expect(subject.observed).to.equal(true);
+    sub1.unsubscribe();
+    expect(subject.observed).to.equal(true);
+    sub2.unsubscribe();
+    expect(subject.observed).to.equal(false);
+    subject.unsubscribe();
+    expect(subject.observed).to.equal(false);
   });
 
   it('should have a static create function that works', () => {
@@ -530,7 +554,7 @@ describe('Subject', () => {
     expect(outputComplete).to.be.true;
   });
 
-  it('should be an Observer which can be given to Observable.subscribe', (done: MochaDone) => {
+  it('should be an Observer which can be given to Observable.subscribe', (done) => {
     const source = of(1, 2, 3, 4, 5);
     const subject = new Subject<number>();
     const expected = [1, 2, 3, 4, 5];
@@ -550,7 +574,7 @@ describe('Subject', () => {
     source.subscribe(subject);
   });
 
-  it('should be usable as an Observer of a finite delayed Observable', (done: MochaDone) => {
+  it('should be usable as an Observer of a finite delayed Observable', (done) => {
     const source = of(1, 2, 3).pipe(delay(50));
     const subject = new Subject<number>();
 
@@ -733,5 +757,168 @@ describe('AnonymousSubject', () => {
 
     observable.subscribe();
     expect(subscribed).to.be.true;
+  });
+});
+
+describe('useDeprecatedSynchronousErrorHandling', () => {
+  beforeEach(() => {
+    config.useDeprecatedSynchronousErrorHandling = true;
+  });
+
+  afterEach(() => {
+    config.useDeprecatedSynchronousErrorHandling = false;
+  });
+
+  it('should throw an error when nexting with a flattened, erroring inner observable', () => {
+    const subject = new Subject<string>();
+    subject.pipe(mergeMap(() => throwError(() => new Error('bad')))).subscribe();
+
+    expect(() => {
+      subject.next('wee');
+    }).to.throw(Error, 'bad');
+  });
+
+  it('should throw an error when nexting with a flattened, erroring inner observable with more than one operator', () => {
+    const subject = new Subject<string>();
+    subject.pipe(mergeMap(() => throwError(() => new Error('bad'))), map(x => x)).subscribe();
+
+    expect(() => {
+      subject.next('wee');
+    }).to.throw(Error, 'bad');
+  });
+
+  it('should throw an error when notifying an error with catchError returning an erroring inner observable', () => {
+    const subject = new Subject<string>();
+    subject.pipe(catchError(() => throwError(() => new Error('bad')))).subscribe();
+
+    expect(() => {
+      subject.error('wee');
+    }).to.throw(Error, 'bad');
+  });
+
+  it('should throw an error when nexting with an operator that errors synchronously', () => {
+    const subject = new Subject<string>();
+    subject.pipe(mergeMap(() => {
+      throw new Error('lol');
+    })).subscribe();
+
+    expect(() => {
+      subject.next('wee');
+    }).to.throw(Error, 'lol');
+  });
+
+  
+  it('should throw an error when notifying an error with a catchError that errors synchronously', () => {
+    const subject = new Subject<string>();
+    subject.pipe(catchError(() => {
+      throw new Error('lol');
+    })).subscribe();
+
+    expect(() => {
+      subject.error('wee');
+    }).to.throw(Error, 'lol');
+  });
+
+  it('should throw an error when nexting with an erroring next handler', () => {
+    const subject = new Subject<string>();
+    subject.subscribe(() => {
+      throw new Error('lol');
+    });
+
+    expect(() => {
+      subject.next('wee');
+    }).to.throw(Error, 'lol');
+  });
+
+  it('should throw an error when notifying with an erroring error handler', () => {
+    const subject = new Subject<string>();
+    subject.subscribe({
+      error: () => {
+        throw new Error('lol');
+      }
+    });
+
+    expect(() => {
+      subject.error('wee');
+    }).to.throw(Error, 'lol');
+  });
+
+  it('should throw an error when notifying with an erroring complete handler', () => {
+    const subject = new Subject<string>();
+    subject.subscribe({
+      complete: () => {
+        throw new Error('lol');
+      }
+    });
+
+    expect(() => {
+      subject.complete();
+    }).to.throw(Error, 'lol');
+  });
+
+  it('should throw an error when notifying an complete, and concatenated with another observable that synchronously errors', () => {
+    const subject = new Subject<string>();
+    concat(subject, throwError(new Error('lol'))).subscribe();
+
+    expect(() => {
+      subject.complete();
+    }).to.throw(Error, 'lol');
+  });
+
+  it('should not throw on second error passed', () => {
+    const subject = new Subject();
+
+    subject.subscribe();
+    
+    expect(() => {
+      subject.error(new Error('one'));
+    }).to.throw(Error, 'one');
+
+    expect(() => {
+      subject.error(new Error('two'));
+    }).not.to.throw(Error, 'two');
+  });
+
+  it('should not throw on second error passed, even after having been operated on', () => {
+    const subject = new Subject();
+
+    subject.pipe(mergeMap(x => [x])).subscribe();
+    
+    expect(() => {
+      subject.error(new Error('one'));
+    }).to.throw(Error, 'one');
+
+    expect(() => {
+      subject.error('two');
+    }).not.to.throw();
+  });
+
+  it('deep rethrowing 1', () => {
+    const subject1 = new Subject();
+    const subject2 = new Subject();
+
+    subject2.subscribe();
+
+    subject1.subscribe({
+      next: () => subject2.error(new Error('hahaha'))
+    });
+
+    expect(() => {
+      subject1.next('test');
+    }).to.throw(Error, 'hahaha');
+  });
+
+  it('deep rethrowing 2', () => {
+    const subject1 = new Subject();
+
+    subject1.subscribe({
+      next: () => {
+        throwError(new Error('hahaha')).subscribe();
+      }
+    });
+
+    expect(() => {
+      subject1.next('test');
+    }).to.throw(Error, 'hahaha');
   });
 });

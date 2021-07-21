@@ -76,10 +76,10 @@ export function fromEvent<T, R>(
   eventName: string,
   options: EventListenerOptions,
   resultSelector: (event: T) => R
-): Observable<T>;
+): Observable<R>;
 
 export function fromEvent(target: NodeStyleEventEmitter | ArrayLike<NodeStyleEventEmitter>, eventName: string): Observable<unknown>;
-/** @deprecated type parameters that cannot be inferred will be removed in v8 */
+/** @deprecated Do not specify explicit type parameters. Signatures with type parameters that cannot be inferred will be removed in v8. */
 export function fromEvent<T>(target: NodeStyleEventEmitter | ArrayLike<NodeStyleEventEmitter>, eventName: string): Observable<T>;
 export function fromEvent<R>(
   target: NodeStyleEventEmitter | ArrayLike<NodeStyleEventEmitter>,
@@ -91,7 +91,7 @@ export function fromEvent(
   target: NodeCompatibleEventEmitter | ArrayLike<NodeCompatibleEventEmitter>,
   eventName: string
 ): Observable<unknown>;
-/** @deprecated type parameters that cannot be inferred will be removed in v8 */
+/** @deprecated Do not specify explicit type parameters. Signatures with type parameters that cannot be inferred will be removed in v8. */
 export function fromEvent<T>(target: NodeCompatibleEventEmitter | ArrayLike<NodeCompatibleEventEmitter>, eventName: string): Observable<T>;
 export function fromEvent<R>(
   target: NodeCompatibleEventEmitter | ArrayLike<NodeCompatibleEventEmitter>,

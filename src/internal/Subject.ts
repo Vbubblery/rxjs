@@ -5,6 +5,7 @@ import { Subscription, EMPTY_SUBSCRIPTION } from './Subscription';
 import { Observer, SubscriptionLike, TeardownLogic } from './types';
 import { ObjectUnsubscribedError } from './util/ObjectUnsubscribedError';
 import { arrRemove } from './util/arrRemove';
+import { errorContext } from './util/errorContext';
 
 /**
  * A Subject is a special type of Observable that allows values to be
@@ -15,20 +16,20 @@ import { arrRemove } from './util/arrRemove';
  */
 export class Subject<T> extends Observable<T> implements SubscriptionLike {
   closed = false;
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   observers: Observer<T>[] = [];
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   isStopped = false;
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   hasError = false;
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   thrownError: any = null;
 
   /**
    * Creates a "subject" by basically gluing an observer to an observable.
    *
    * @nocollapse
-   * @deprecated Recommended you do not use, will be removed at some point in the future. Plans for replacement still under discussion.
+   * @deprecated Recommended you do not use. Will be removed at some point in the future. Plans for replacement still under discussion.
    */
   static create: (...args: any[]) => any = <T>(destination: Observer<T>, source: Observable<T>): AnonymousSubject<T> => {
     return new AnonymousSubject<T>(destination, source);
@@ -39,7 +40,7 @@ export class Subject<T> extends Observable<T> implements SubscriptionLike {
     super();
   }
 
-  /** @deprecated This is an internal implementation detail, do not use directly. */
+  /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
   lift<R>(operator: Operator<T, R>): Observable<R> {
     const subject = new AnonymousSubject(this, this);
     subject.operator = operator as any;
@@ -54,41 +55,51 @@ export class Subject<T> extends Observable<T> implements SubscriptionLike {
   }
 
   next(value: T) {
-    this._throwIfClosed();
-    if (!this.isStopped) {
-      const copy = this.observers.slice();
-      for (const observer of copy) {
-        observer.next(value);
+    errorContext(() => {
+      this._throwIfClosed();
+      if (!this.isStopped) {
+        const copy = this.observers.slice();
+        for (const observer of copy) {
+          observer.next(value);
+        }
       }
-    }
+    });
   }
 
   error(err: any) {
-    this._throwIfClosed();
-    if (!this.isStopped) {
-      this.hasError = this.isStopped = true;
-      this.thrownError = err;
-      const { observers } = this;
-      while (observers.length) {
-        observers.shift()!.error(err);
+    errorContext(() => {
+      this._throwIfClosed();
+      if (!this.isStopped) {
+        this.hasError = this.isStopped = true;
+        this.thrownError = err;
+        const { observers } = this;
+        while (observers.length) {
+          observers.shift()!.error(err);
+        }
       }
-    }
+    });
   }
 
   complete() {
-    this._throwIfClosed();
-    if (!this.isStopped) {
-      this.isStopped = true;
-      const { observers } = this;
-      while (observers.length) {
-        observers.shift()!.complete();
+    errorContext(() => {
+      this._throwIfClosed();
+      if (!this.isStopped) {
+        this.isStopped = true;
+        const { observers } = this;
+        while (observers.length) {
+          observers.shift()!.complete();
+        }
       }
-    }
+    });
   }
 
   unsubscribe() {
     this.isStopped = this.closed = true;
     this.observers = null!;
+  }
+
+  get observed() {
+    return this.observers?.length > 0;
   }
 
   /** @internal */
@@ -140,7 +151,7 @@ export class Subject<T> extends Observable<T> implements SubscriptionLike {
  */
 export class AnonymousSubject<T> extends Subject<T> {
   constructor(
-    /** @deprecated Internal implementation detail, do not use. */
+    /** @deprecated Internal implementation detail, do not use directly. Will be made internal in v8. */
     public destination?: Observer<T>,
     source?: Observable<T>
   ) {
